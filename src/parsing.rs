@@ -52,6 +52,27 @@ struct GetBatchJobResponse {
     progress_percentage: i32,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct BatchJobItem {
+    completed_at: Option<String>,
+    effective_at: String,
+    item_id: String,
+    item_name: String,
+    job_id: Option<String>,
+    job_record_id: Option<String>,
+    skip_reason: Option<String>,
+    error_message: Option<String>,
+    started_at: Option<String>,
+    status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct BatchJobItemsList {
+    items: Vec<BatchJobItem>,
+    next_page_token: Option<String>,
+    total_size: Option<i32>,
+}
+
 pub struct Parser {
     api_key: String,
     base_url: String,
@@ -64,7 +85,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn new(
+    pub fn new(
         directory_path: String,
         directory_description: Option<String>,
         eu: bool,
@@ -102,7 +123,7 @@ impl Parser {
         }
     }
 
-    async fn create_directory(&mut self) -> anyhow::Result<()> {
+    pub async fn create_directory(&mut self) -> anyhow::Result<()> {
         println!(
             "Creating a directory on LlamaCloud from {}",
             self.directory_path
@@ -132,7 +153,7 @@ impl Parser {
         }
     }
 
-    async fn upload_files_to_directory(&self) -> anyhow::Result<()> {
+    pub async fn upload_files_to_directory(&self) -> anyhow::Result<()> {
         let dir_id = match &self.directory_id {
             Some(s) => s,
             None => {
@@ -187,7 +208,7 @@ impl Parser {
         Ok(())
     }
 
-    async fn create_batch_job(&mut self) -> anyhow::Result<()> {
+    pub async fn create_batch_job(&mut self) -> anyhow::Result<()> {
         let dir_id = match &self.directory_id {
             Some(s) => s,
             None => {
@@ -238,7 +259,7 @@ impl Parser {
         Ok(())
     }
 
-    async fn poll_job_for_completion(&self) -> anyhow::Result<bool> {
+    pub async fn poll_job_for_completion(&self) -> anyhow::Result<bool> {
         let job_id = match &self.batch_job_id {
             Some(s) => s,
             None => {
@@ -278,6 +299,7 @@ impl Parser {
                     println!("Job completed with status: {}", response_json.job.status);
                     return Ok(true);
                 } else {
+                    println!("Job progress: {:?}%", response_json.progress_percentage);
                     if i < (self.max_polling_attempts - 1) {
                         tokio::time::sleep(tokio::time::Duration::from_secs(self.polling_interval))
                             .await;
@@ -288,5 +310,80 @@ impl Parser {
         }
         eprintln!("Maximum retries exceeded, job never completed...");
         Ok(false)
+    }
+
+    pub async fn get_parsed_results(&self) -> anyhow::Result<Vec<String>> {
+        let job_id = match &self.batch_job_id {
+            Some(s) => s,
+            None => {
+                eprintln!(
+                    "A Job ID is needed for the polling to take place. Run `create_batch_job` first"
+                );
+                return Err(anyhow::anyhow!(
+                    "A directory ID is needed for the polling to take place. Run `create_batch_job` first"
+                ));
+            }
+        };
+        println!("Starting to list job items...");
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!(
+                "{}/api/v1/beta/batch-processing/{}/items",
+                self.base_url, job_id
+            ))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT))
+            .send()
+            .await?;
+        if !response.status().is_success() {
+            let detail = response.text().await?;
+            eprintln!(
+                "An error occurred while listing the job's items: {}.",
+                detail,
+            );
+            return Err(anyhow::anyhow!(
+                "An error occurred while listing the job's items"
+            ));
+        } else {
+            println!("Job's items listed successfully");
+            let response_json = response.json::<BatchJobItemsList>().await?;
+            let mut parsed_texts: Vec<String> = vec![];
+            for item in response_json.items {
+                if item.status == "completed" {
+                    let item_parsed = client
+                        .get(format!(
+                            "{}/api/v1/parsing/job/{}/result/text",
+                            self.base_url, item.item_id
+                        ))
+                        .header("Authorization", format!("Bearer {}", self.api_key))
+                        .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT))
+                        .send()
+                        .await?;
+                    if item_parsed.status().is_success() {
+                        println!("Successfully retrieved text content for {}", item.item_id);
+                        let parsed_text = item_parsed.text().await?;
+                        parsed_texts.push(parsed_text);
+                    } else {
+                        let detail = item_parsed.text().await?;
+                        eprintln!(
+                            "There was an error while retrieving the parsed text for {}: {}",
+                            item.item_id, detail
+                        );
+                    }
+                } else {
+                    eprintln!(
+                        "Item {} has status {}. Cannot retrieve parse result.",
+                        item.item_id, item.status
+                    );
+                }
+            }
+            if parsed_texts.len() == 0 {
+                eprintln!("Could not retrieve any parsed text result.");
+                return Err(anyhow::anyhow!(
+                    "Could not retrieve any parsed text result."
+                ));
+            }
+            return Ok(parsed_texts);
+        }
     }
 }

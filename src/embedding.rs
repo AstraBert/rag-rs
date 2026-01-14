@@ -1,4 +1,4 @@
-use bm25::{Embedder, EmbedderBuilder, LanguageMode};
+use bm25::{Embedder, EmbedderBuilder, Embedding, LanguageMode};
 
 use crate::chunking::Chunk;
 
@@ -15,4 +15,12 @@ pub fn embed_chunks(mut chunks: Vec<Chunk>) -> Vec<Chunk> {
         i += 1;
     }
     chunks
+}
+
+pub fn embed_text(text: String) -> Embedding {
+    let embedder: Embedder = EmbedderBuilder::with_avgdl(DEFAULT_AVGDL)
+        .language_mode(LanguageMode::Detect)
+        .build();
+    let embd = embedder.embed(&text);
+    embd
 }
