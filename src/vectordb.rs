@@ -9,6 +9,7 @@ use qdrant_client::{
 
 use crate::chunking::Chunk;
 
+#[derive(Debug, Clone)]
 pub struct VectorDB {
     pub collection_name: String,
     pub url: String,
