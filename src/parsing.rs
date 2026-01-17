@@ -33,10 +33,22 @@ impl Parser {
             if !path.is_file() {
                 continue;
             }
-            let result = if path.ends_with(".pdf") {
+            let result = if path
+                .extension()
+                .expect("Should be able to get file extension")
+                == "pdf"
+            {
                 self.extract_text_from_pdf(path).await?
             } else {
-                if path.ends_with(".txt") || path.ends_with(".md") {
+                if path
+                    .extension()
+                    .expect("Should be able to get file extension")
+                    == "md"
+                    || path
+                        .extension()
+                        .expect("Should be able to get file extension")
+                        == "txt"
+                {
                     self.read_file(path).await?
                 } else {
                     eprintln!(

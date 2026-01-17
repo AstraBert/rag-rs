@@ -2,7 +2,7 @@ use bm25::Embedding;
 use qdrant_client::{
     Payload, Qdrant,
     qdrant::{
-        CreateCollectionBuilder, NamedVectors, PointStruct, Query, QueryPointsBuilder,
+        CreateCollectionBuilder, NamedVectors, PointStruct, QueryPointsBuilder,
         SparseVectorParamsBuilder, SparseVectorsConfigBuilder, UpsertPointsBuilder, Vector,
     },
 };
