@@ -6,6 +6,7 @@ use qdrant_client::{
         SparseVectorParamsBuilder, SparseVectorsConfigBuilder, UpsertPointsBuilder, Vector,
     },
 };
+use std::collections::HashMap;
 
 use crate::chunking::Chunk;
 
@@ -59,13 +60,24 @@ impl VectorDB {
         let collection_ready = self.check_collection_ready().await;
         match collection_ready {
             Ok(ready) => {
+                // not ready -> exists but does not contain points
                 if !ready {
                 } else {
+                    // ready -> exists and contains points
                     println!("Collection is ready and loaded");
                     return Ok(());
                 }
             }
-            Err(_) => {}
+            // error: does not exist or fails to check for points
+            Err(e) => {
+                eprintln!(
+                    "There was an error during the collection health check: {}",
+                    e.to_string(),
+                );
+                return Err(anyhow::anyhow!(
+                    "There was an error during the collection health check"
+                ));
+            }
         }
         let client = Qdrant::from_url(&self.url)
             .api_key(std::env::var("QDRANT_API_KEY"))
@@ -98,12 +110,13 @@ impl VectorDB {
                     continue;
                 }
             };
-            let mut indices: Vec<u32> = vec![];
-            let mut values: Vec<f32> = vec![];
+            let mut index_map: HashMap<u32, f32> = HashMap::new();
             for token in &embd.0 {
-                indices.push(token.index);
-                values.push(token.value);
+                *index_map.entry(token.index).or_insert(0.0) += token.value;
             }
+            let mut index_value_pairs: Vec<_> = index_map.into_iter().collect();
+            index_value_pairs.sort_by_key(|(idx, _)| *idx);
+            let (indices, values): (Vec<u32>, Vec<f32>) = index_value_pairs.into_iter().unzip();
             let vector = Vector::new_sparse(indices, values);
             let mut payload = Payload::new();
             payload.insert("content", chunk.content);
@@ -170,7 +183,7 @@ impl VectorDB {
                     return Ok(true);
                 } else {
                     eprintln!("Collection does not have any data points");
-                    return Err(anyhow::anyhow!("Collection does not have any data points"));
+                    return Ok(false);
                 }
             }
             None => {
@@ -193,6 +206,7 @@ impl VectorDB {
         let query = QueryPointsBuilder::new(&self.collection_name)
             .query(indices_values)
             .limit(limit)
+            .with_payload(true)
             .using("text");
         let results = client.query(query).await?;
         let mut contents: Vec<String> = vec![];

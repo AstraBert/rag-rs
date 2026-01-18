@@ -77,6 +77,15 @@ enum Commands {
         /// While this argument has no effect for local development, it is advisable to set it for production deployments.
         #[arg(long, default_value = None)]
         cors: Option<String>,
+
+        // logging
+        /// Logging level. Defaults to 'info'. Available values: 'info', 'debug', 'error', 'warning', 'trace'
+        #[arg(long, default_value = None)]
+        log_level: Option<String>,
+
+        /// Wether or not to activate JSON logging. Defaults to false (uses compact logging by default).
+        #[arg(long, default_value_t = false)]
+        log_json: bool,
     },
 }
 
@@ -101,6 +110,8 @@ async fn main() -> anyhow::Result<()> {
             host,
             rate_limit_per_minute,
             cors,
+            log_level,
+            log_json,
         } => {
             let server = RagServer::new(
                 qdrant_url,
@@ -110,6 +121,8 @@ async fn main() -> anyhow::Result<()> {
                 host,
                 rate_limit_per_minute,
                 cors,
+                log_level,
+                log_json,
             );
             server.serve().await?;
         }

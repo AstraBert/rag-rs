@@ -38,6 +38,7 @@ impl Parser {
                 .expect("Should be able to get file extension")
                 == "pdf"
             {
+                println!("Extracting text from {:?}", path);
                 self.extract_text_from_pdf(path).await?
             } else {
                 if path
@@ -49,6 +50,7 @@ impl Parser {
                         .expect("Should be able to get file extension")
                         == "txt"
                 {
+                    println!("Reading text from {:?}", path);
                     self.read_file(path).await?
                 } else {
                     eprintln!(
@@ -58,6 +60,7 @@ impl Parser {
                     continue;
                 }
             };
+            println!("Text size: {:?} chars", result.len());
             results.push(result);
         }
 

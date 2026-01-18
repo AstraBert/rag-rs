@@ -1,3 +1,4 @@
 /target
 future_code.rs
 data/
+.venv/

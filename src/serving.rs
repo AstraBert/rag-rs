@@ -9,8 +9,12 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::cors::{Any, CorsLayer};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
-use tracing::{debug, info, instrument};
+use tracing::{Level, debug, info, instrument};
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::fmt;
 
 const DEFAULT_PORT: u16 = 8000;
 const DEFAULT_HOST: &str = "0.0.0.0";
@@ -26,6 +30,8 @@ pub struct RagServer {
     pub host: IpAddr,
     pub rate_limit_per_minute: u32,
     pub cors: Option<String>,
+    pub log_level: Level,
+    pub log_json: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -77,7 +83,13 @@ impl RagServer {
         host: Option<String>,
         rate_limit_per_minute: Option<u32>,
         cors: Option<String>,
+        log_level: Option<String>,
+        log_json: bool,
     ) -> Self {
+        let app_log_level = match log_level {
+            Some(s) => Level::from_str(&s).expect("Log level not supported"),
+            None => Level::INFO,
+        };
         let server_port = match port {
             Some(n) => n,
             None => DEFAULT_PORT,
@@ -109,6 +121,8 @@ impl RagServer {
             cors: cors,
             rate_limit_per_minute: server_rate_limit,
             openai_api_key: api_key,
+            log_level: app_log_level,
+            log_json: log_json,
         }
     }
 
@@ -117,7 +131,7 @@ impl RagServer {
         let coll_loaded = vectordb.check_collection_ready().await?;
         if !coll_loaded {
             return Err(anyhow::anyhow!(
-                "Vector database does not contain any vectors, or collection does not exist"
+                "Vector database does not contain any vectors"
             ));
         }
         let state = AppState {
@@ -170,7 +184,13 @@ impl RagServer {
         let addr = SocketAddr::from((self.host, self.port));
         tracing::info!("listening on {}", addr);
         let listener = tokio::net::TcpListener::bind(addr).await?;
-        tracing_subscriber::fmt().pretty().init();
+        let level_filter = LevelFilter::from_level(self.log_level);
+        let subscriber = tracing_subscriber::registry()
+            .with(level_filter)
+            .with((!self.log_json).then(|| fmt::layer().compact()))
+            .with((self.log_json).then(|| fmt::layer().json()));
+        subscriber.init();
+        info!("Server listening on {}", addr.to_string());
         axum::serve(
             listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
