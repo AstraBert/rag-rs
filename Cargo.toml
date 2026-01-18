@@ -1,7 +1,12 @@
 [package]
 name = "rag-rs"
-version = "0.1.0"
+version = "0.1.0-alpha"
 edition = "2024"
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/AstraBert/rag-rs"
+description = "A Rust-native implementation of the RAG stack"
+keywords = ["rag", "llm", "ai", "rust"]
 
 [dependencies]
 anyhow = "1.0.100"

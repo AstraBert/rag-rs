@@ -18,7 +18,7 @@ struct CliArgs {
 enum Commands {
     /// Parse, chunk and embed the documents in a given directory, and upload them to a
     /// vector store.
-    /// Uses LlamaParse for parsing, memchunk for chunking, BM25 for embeddings and Qdrant as a vector database.
+    /// Uses PdfExtract for parsing, memchunk for chunking, BM25 for embeddings and Qdrant as a vector database.
     Load {
         // Parser options
         /// The path to the directory containing the files for the RAG pipeline
@@ -41,8 +41,7 @@ enum Commands {
         #[arg(long)]
         collection_name: String,
     },
-    /// release all the packages that were version-bumped.
-    /// Run only after `check` and `version` both successfully completed.
+    /// Serve the RAG application as an API server.
     Serve {
         // URL for a Qdrant vector store instance.
         /// If your Qdrant instance needs an API key, make sure that
