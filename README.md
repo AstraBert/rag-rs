@@ -116,6 +116,7 @@ rag-rs --qdrant-url http://localhost:6334 \
 
 To reach the first stable version, this software will first:
 
+- [ ] Add a caching layer
 - [ ] Introduce thorough testing
 - [ ] Add a programmatic API along with the CLI app, possibly both in Rust and Python
 - [ ] Add an NPM-installable version
