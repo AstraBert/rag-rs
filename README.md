@@ -1,8 +1,8 @@
 # rag-rs
 
-> ![NOTE]
+> [!NOTE]
 >
-> _This software is released in `alpha`, so you can and should expect bugs. Please take a look at the [Roadmap]() to see the plan to reach the first stable version_
+> _This software is released in `alpha`, so you can and should expect bugs. Please take a look at the [Roadmap](#roadmap) to see the plan to reach the first stable version_
 
 A Rust-native implementation of the RAG stack, using:
 
