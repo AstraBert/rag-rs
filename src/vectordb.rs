@@ -58,14 +58,18 @@ impl VectorDB {
 
     pub async fn upload_embeddings(&self, chunks: Vec<Chunk>) -> anyhow::Result<()> {
         let collection_ready = self.check_collection_ready().await;
-        match collection_ready {
-            Ok(ready) => {
+        let mut base_id = match collection_ready {
+            Ok(num_points) => {
                 // not ready -> exists but does not contain points
-                if !ready {
+                if num_points == 0 {
+                    num_points
                 } else {
                     // ready -> exists and contains points
-                    println!("Collection is ready and loaded");
-                    return Ok(());
+                    eprintln!(
+                        "WARNING: collection already has {:?} points, preparing to upload more...",
+                        num_points
+                    );
+                    num_points
                 }
             }
             // error: does not exist or fails to check for points
@@ -78,7 +82,7 @@ impl VectorDB {
                     "There was an error during the collection health check"
                 ));
             }
-        }
+        };
         let client = Qdrant::from_url(&self.url)
             .api_key(std::env::var("QDRANT_API_KEY"))
             .build()?;
@@ -97,15 +101,14 @@ impl VectorDB {
             ));
         }
         let mut points: Vec<PointStruct> = vec![];
-        let mut i = 0;
         for chunk in chunks {
-            i += 1;
+            base_id += 1;
             let embd = match chunk.embedding {
                 Some(e) => e,
                 None => {
                     eprintln!(
                         "Embedding {:?} does not have an associated embedding, skipping...",
-                        i
+                        base_id
                     );
                     continue;
                 }
@@ -121,7 +124,7 @@ impl VectorDB {
             let mut payload = Payload::new();
             payload.insert("content", chunk.content);
             let point = PointStruct::new(
-                i,
+                base_id,
                 NamedVectors::default().add_vector("text", vector),
                 payload,
             );
@@ -131,18 +134,8 @@ impl VectorDB {
             .upsert_points(UpsertPointsBuilder::new(&self.collection_name, points))
             .await?;
         match response.result {
-            Some(r) => {
-                if r.status <= 299 && r.status >= 200 {
-                    println!("All the vectors have been succcessfully uploaded");
-                } else {
-                    eprintln!(
-                        "There was an error while uploading vectors. Status: {:?}",
-                        r.status
-                    );
-                    return Err(anyhow::anyhow!(
-                        "There was an error while uploading vectors"
-                    ));
-                }
+            Some(_) => {
+                println!("All the vectors have been succcessfully uploaded");
             }
             None => {
                 eprintln!("The uploading operation did not produce any result");
@@ -154,7 +147,7 @@ impl VectorDB {
         Ok(())
     }
 
-    pub async fn check_collection_ready(&self) -> anyhow::Result<bool> {
+    pub async fn check_collection_ready(&self) -> anyhow::Result<u64> {
         let client = Qdrant::from_url(&self.url)
             .api_key(std::env::var("QDRANT_API_KEY"))
             .build()?;
@@ -179,11 +172,9 @@ impl VectorDB {
         match collection_info.points_count {
             Some(p) => {
                 if p > 0 {
-                    println!("Collection is loaded and ready to be used");
-                    return Ok(true);
+                    return Ok(p);
                 } else {
-                    eprintln!("Collection does not have any data points");
-                    return Ok(false);
+                    return Ok(0_u64);
                 }
             }
             None => {

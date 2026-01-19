@@ -3,23 +3,64 @@ use std::path::PathBuf;
 use anyhow;
 use tokio::fs;
 
+use crate::caching::Cache;
+
 pub struct Parser {
     pub directory_path: String,
+    pub cached: bool,
+    pub cache_directory: Option<String>,
+    pub cache_chunk_size: Option<usize>,
 }
 
 impl Parser {
-    pub fn new(directory_path: String) -> Self {
+    pub fn new(
+        directory_path: String,
+        cached: bool,
+        cache_directory: Option<String>,
+        cache_chunk_size: Option<usize>,
+    ) -> Self {
         Self {
             directory_path: directory_path,
+            cache_directory: cache_directory,
+            cache_chunk_size: cache_chunk_size,
+            cached: cached,
         }
     }
 
     async fn extract_text_from_pdf(&self, file_path: PathBuf) -> anyhow::Result<String> {
-        let bytes = fs::read(file_path).await?;
+        if self.cached {
+            let cache = Cache::new(self.cache_directory.clone(), self.cache_chunk_size);
+            match cache
+                .read_file_content(
+                    file_path
+                        .to_str()
+                        .expect("Should be able to convert path to string"),
+                )
+                .await
+            {
+                Ok(s) => {
+                    return Ok(s);
+                }
+                Err(_) => {}
+            };
+        }
+        let bytes = fs::read(file_path.clone()).await?;
         let out = pdf_extract::extract_text_from_mem(&bytes)?;
+        if self.cached {
+            let cache = Cache::new(self.cache_directory.clone(), self.cache_chunk_size);
+            cache
+                .write_file_content(
+                    file_path
+                        .to_str()
+                        .expect("Should be able to convert path to string"),
+                    out.clone(),
+                )
+                .await?;
+        }
         Ok(out)
     }
 
+    // This is as expensive as reading/writing from cache, no need for caching here
     async fn read_file(&self, file_path: PathBuf) -> anyhow::Result<String> {
         let content = fs::read_to_string(file_path).await?;
         Ok(content)

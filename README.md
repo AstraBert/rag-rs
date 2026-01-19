@@ -47,6 +47,12 @@ rag-rs load [OPTIONS] --directory <DIRECTORY> --qdrant-url <QDRANT_URL> --collec
   Name of the collection for the Qdrant vector store. (required)
 - `--chunk-size <CHUNK_SIZE>`  
   Chunking size. **Default:** `1024`
+- `--cache-dir <CACHE_DIR>`
+  Directory where to cache the parsed file. **Default:** `.rag-rs-cache/`
+- `--cache-chunk-size <CACHE_CHUNK_SIZE>`
+  Chunk size for cached writes. **Default:** `1024 bytes`
+- `--no-cache`
+  Deactivate read/write from cache. **Default:** active
 - `-h, --help`  
   Print help information.
 
@@ -56,7 +62,9 @@ rag-rs load [OPTIONS] --directory <DIRECTORY> --qdrant-url <QDRANT_URL> --collec
 rag-rs --directory data/ \
     --chunk-size 2048 \
     --qdrant-url http://localhost:6334 \
-    --collection-name test-data
+    --collection-name test-data \
+    --cache-dir cache/ \
+    --cache-chunk-size 1048576
 ```
 
 ### `serve` command
