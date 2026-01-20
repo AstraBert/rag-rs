@@ -2,3 +2,4 @@
 future_code.rs
 data/
 .venv/
+.rag-rs-cache/

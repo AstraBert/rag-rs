@@ -1,3 +1,4 @@
+mod caching;
 mod chunking;
 mod embedding;
 mod parsing;
@@ -40,6 +41,18 @@ enum Commands {
         /// Name of the collection for the Qdrant vector store.
         #[arg(long)]
         collection_name: String,
+
+        /// Directory where to cache the parsed file. Defaults to `.rag-rs-cache/`
+        #[arg(long, default_value = None)]
+        cache_dir: Option<String>,
+
+        /// Chunk size for cached writes. Defaults to 1024 bytes.
+        #[arg(long, default_value = None)]
+        cache_chunk_size: Option<usize>,
+
+        /// Deactivate read/write from cache
+        #[arg(long, default_value_t = false)]
+        no_cache: bool,
     },
     /// Serve the RAG application as an API server.
     Serve {
@@ -97,8 +110,19 @@ async fn main() -> anyhow::Result<()> {
             chunk_size,
             qdrant_url,
             collection_name,
+            cache_dir,
+            cache_chunk_size,
+            no_cache,
         } => {
-            let pipeline = Pipeline::new(directory, chunk_size, qdrant_url, collection_name);
+            let pipeline = Pipeline::new(
+                directory,
+                chunk_size,
+                qdrant_url,
+                collection_name,
+                !no_cache,
+                cache_dir,
+                cache_chunk_size,
+            );
             pipeline.run().await?;
         }
         Commands::Serve {

@@ -3,6 +3,9 @@ use crate::{chunking::chunk_text, embedding::embed_chunks, parsing::Parser, vect
 pub struct Pipeline {
     // Parsing options
     pub directory_path: String,
+    pub cached: bool,
+    pub cache_directory: Option<String>,
+    pub cache_chunk_size: Option<usize>,
     // Chunking options
     pub chunk_size: usize,
     // VectorDB options
@@ -16,17 +19,28 @@ impl Pipeline {
         chunk_size: usize,
         qdrant_url: String,
         collection_name: String,
+        cached: bool,
+        cache_directory: Option<String>,
+        cache_chunk_size: Option<usize>,
     ) -> Self {
         return Self {
             directory_path: directory_path,
             chunk_size: chunk_size,
             qdrant_url: qdrant_url,
             collection_name: collection_name,
+            cache_directory: cache_directory,
+            cache_chunk_size: cache_chunk_size,
+            cached: cached,
         };
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
-        let parser = Parser::new(self.directory_path.clone());
+        let parser = Parser::new(
+            self.directory_path.clone(),
+            self.cached,
+            self.cache_directory.clone(),
+            self.cache_chunk_size,
+        );
         let vectordb = VectorDB::new(self.qdrant_url.clone(), self.collection_name.clone());
         let results = parser.parse().await?;
         vectordb.create_collection().await?;

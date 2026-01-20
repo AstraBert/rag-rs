@@ -129,7 +129,7 @@ impl RagServer {
     pub async fn serve(&self) -> anyhow::Result<()> {
         let vectordb = VectorDB::new(self.qdrant_url.clone(), self.collection_name.clone());
         let coll_loaded = vectordb.check_collection_ready().await?;
-        if !coll_loaded {
+        if coll_loaded == 0 {
             return Err(anyhow::anyhow!(
                 "Vector database does not contain any vectors"
             ));
