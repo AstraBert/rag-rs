@@ -19,8 +19,8 @@ pub struct VectorDB {
 impl VectorDB {
     pub fn new(url: String, collection_name: String) -> Self {
         Self {
-            collection_name: collection_name,
-            url: url,
+            collection_name,
+            url,
         }
     }
 
@@ -44,15 +44,15 @@ impl VectorDB {
             .await?;
         if response.result {
             println!("Collection {} successfully created", self.collection_name);
-            return Ok(());
+            Ok(())
         } else {
             eprintln!(
                 "There was an error creating collection: {}",
                 self.collection_name
             );
-            return Err(anyhow::anyhow!(
+            Err(anyhow::anyhow!(
                 "There was an error creating the Qdrant collection"
-            ));
+            ))
         }
     }
 
@@ -76,7 +76,7 @@ impl VectorDB {
             Err(e) => {
                 eprintln!(
                     "There was an error during the collection health check: {}",
-                    e.to_string(),
+                    e,
                 );
                 return Err(anyhow::anyhow!(
                     "There was an error during the collection health check"
@@ -172,16 +172,16 @@ impl VectorDB {
         match collection_info.points_count {
             Some(p) => {
                 if p > 0 {
-                    return Ok(p);
+                    Ok(p)
                 } else {
-                    return Ok(0_u64);
+                    Ok(0_u64)
                 }
             }
             None => {
                 eprintln!("Could not retrieve the number of data points in the collection");
-                return Err(anyhow::anyhow!(
+                Err(anyhow::anyhow!(
                     "Could not retrieve the number of data points in the collection"
-                ));
+                ))
             }
         }
     }

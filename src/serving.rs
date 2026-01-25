@@ -68,8 +68,8 @@ impl IntoResponse for RagError {
 impl RagResponse {
     fn new(response: String, retrieved: Vec<String>) -> Self {
         Self {
-            response: response,
-            retrieved: retrieved,
+            response,
+            retrieved,
         }
     }
 }
@@ -114,15 +114,15 @@ impl RagServer {
             }
         };
         Self {
-            qdrant_url: qdrant_url,
-            collection_name: collection_name,
+            qdrant_url,
+            collection_name,
             host: server_host,
             port: server_port,
-            cors: cors,
+            cors,
             rate_limit_per_minute: server_rate_limit,
             openai_api_key: api_key,
             log_level: app_log_level,
-            log_json: log_json,
+            log_json,
         }
     }
 
@@ -135,7 +135,7 @@ impl RagServer {
             ));
         }
         let state = AppState {
-            vectordb: vectordb,
+            vectordb,
             openai_client: Client::with_config(
                 OpenAIConfig::new().with_api_key(&self.openai_api_key),
             ),
@@ -223,7 +223,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!("Could not retrieve results because of {}", e.to_string()),
+                detail: format!("Could not retrieve results because of {}", e),
             });
         }
     };
@@ -244,7 +244,7 @@ async fn rag(
                 status_code: 500,
                 detail: format!(
                     "Could not generate an OpenAI request because of {}",
-                    e.to_string()
+                    e
                 ),
             });
         }
@@ -265,7 +265,7 @@ async fn rag(
                 status_code: 500,
                 detail: format!(
                     "Could not generate an OpenAI response because of {}",
-                    e.to_string()
+                    e
                 ),
             });
         }

@@ -10,7 +10,7 @@ pub struct Chunk {
 impl Chunk {
     pub fn from_content(content: String) -> Self {
         Self {
-            content: content,
+            content,
             embedding: None,
         }
     }
