@@ -28,3 +28,20 @@ pub fn embed_text(text: String) -> Embedding {
     let embd = embedder.embed(&text);
     embd
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_embed_chunks() {
+        let mut chunks: Vec<Chunk> = vec![
+            Chunk::from_content("hello world".to_string()),
+            Chunk::from_content("bye world".to_string()),
+        ];
+        chunks = embed_chunks(chunks);
+        for c in chunks {
+            assert!(c.embedding.is_some());
+        }
+    }
+}

@@ -8,7 +8,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    fn from_content(content: String) -> Self {
+    pub fn from_content(content: String) -> Self {
         Self {
             content: content,
             embedding: None,
@@ -30,4 +30,26 @@ pub fn chunk_text(text: String, size: usize) -> Vec<Chunk> {
     }
     println!("Created {:?} chunks", struct_chunks.len());
     struct_chunks
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_chunk_from_content() {
+        let chunk = Chunk::from_content("test".to_string());
+        assert_eq!(chunk.content, "test".to_string());
+        assert!(chunk.embedding.is_none());
+    }
+
+    #[test]
+    fn test_chunk_text() {
+        // this config should produce only one chunk
+        let text = "This is a one-chunk text.".to_string();
+        let size: usize = 1024;
+        let chunks = chunk_text(text, size);
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].content, "This is a one-chunk text.".to_string());
+    }
 }

@@ -52,3 +52,31 @@ impl Pipeline {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::pipeline::Pipeline;
+
+    #[tokio::test]
+    async fn test_pipeline_run() {
+        let qdrant_url_var = std::env::var("QDRANT_URL");
+        let qdrant_url = match qdrant_url_var {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                println!("Skipping test because Qdrant is not available");
+                return;
+            }
+        };
+        let pipeline = Pipeline::new(
+            "testfiles/".to_string(),
+            1024_usize,
+            qdrant_url,
+            "test-collection".to_string(),
+            true,
+            None,
+            None,
+        );
+        let result = pipeline.run().await;
+        assert!(result.is_ok());
+    }
+}
