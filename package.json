@@ -16,10 +16,10 @@
     "url": "https://github.com/AstraBert/rag-rs.git"
   },
   "keywords": [
-    "arxiv",
-    "papers",
-    "research",
-    "cli"
+    "rag",
+    "llm",
+    "ai",
+    "rust"
   ],
   "license": "ISC",
   "bugs": {
