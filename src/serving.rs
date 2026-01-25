@@ -68,8 +68,8 @@ impl IntoResponse for RagError {
 impl RagResponse {
     fn new(response: String, retrieved: Vec<String>) -> Self {
         Self {
-            response: response,
-            retrieved: retrieved,
+            response,
+            retrieved,
         }
     }
 }
@@ -114,15 +114,15 @@ impl RagServer {
             }
         };
         Self {
-            qdrant_url: qdrant_url,
-            collection_name: collection_name,
+            qdrant_url,
+            collection_name,
             host: server_host,
             port: server_port,
-            cors: cors,
+            cors,
             rate_limit_per_minute: server_rate_limit,
             openai_api_key: api_key,
             log_level: app_log_level,
-            log_json: log_json,
+            log_json,
         }
     }
 
@@ -135,7 +135,7 @@ impl RagServer {
             ));
         }
         let state = AppState {
-            vectordb: vectordb,
+            vectordb,
             openai_client: Client::with_config(
                 OpenAIConfig::new().with_api_key(&self.openai_api_key),
             ),
@@ -223,7 +223,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!("Could not retrieve results because of {}", e.to_string()),
+                detail: format!("Could not retrieve results because of {}", e),
             });
         }
     };
@@ -242,10 +242,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!(
-                    "Could not generate an OpenAI request because of {}",
-                    e.to_string()
-                ),
+                detail: format!("Could not generate an OpenAI request because of {}", e),
             });
         }
     };
@@ -263,10 +260,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!(
-                    "Could not generate an OpenAI response because of {}",
-                    e.to_string()
-                ),
+                detail: format!("Could not generate an OpenAI response because of {}", e),
             });
         }
     };
@@ -275,4 +269,71 @@ async fn rag(
     debug!(event="OverallLatencyReport", data_id = %payload.query, "Total latency: {} ms", elapsed + elapsed_resp);
 
     Ok(Json(RagResponse::new(response_text, results)))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use crate::pipeline::Pipeline;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use tower::Service;
+
+    #[tokio::test]
+    async fn test_api_endpoint() {
+        let qdrant_url_var = std::env::var("QDRANT_URL");
+        let qdrant_url = match qdrant_url_var {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                println!("Skipping test because Qdrant is not available");
+                return;
+            }
+        };
+        let openai_api_key_var = std::env::var("OPENAI_API_KEY");
+        let openai_api_key = match openai_api_key_var {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                println!("Skipping test because OpenAI API key is not available");
+                return;
+            }
+        };
+        let pipeline = Pipeline::new(
+            "testfiles/".to_string(),
+            1024_usize,
+            qdrant_url.clone(),
+            "test-serving-collection".to_string(),
+            true,
+            None,
+            None,
+        );
+        let result = pipeline.run().await;
+        assert!(result.is_ok());
+        let vectordb = VectorDB::new(qdrant_url, "test-serving-collection".to_string());
+        let state = AppState {
+            vectordb: vectordb,
+            openai_client: Client::with_config(OpenAIConfig::new().with_api_key(openai_api_key)),
+        };
+        let mut app = Router::new().route("/queries", post(rag)).with_state(state);
+        let request_body = serde_json::to_string(&RagRequest {
+            query: "Is this a test?".to_string(),
+            limit: Some(1_u64),
+            openai_model: None,
+        })
+        .unwrap();
+        let response = app
+            .call(
+                Request::builder()
+                    .uri("/queries")
+                    .method("POST")
+                    .header("content-type", "application/json")
+                    .body(Body::from(request_body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
 }

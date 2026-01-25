@@ -51,3 +51,40 @@ impl Cache {
         Ok(buf)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_correct_cache_init() {
+        let cache = Cache::new(None, None);
+        assert_eq!(cache.chunk_size, DEFAULT_CHUNK_SIZE);
+        assert_eq!(cache.directory, DEFAULT_CACHE_DIR);
+        let cache_1 = Cache::new(Some("data/cache".to_string()), Some(1024_usize));
+        assert_eq!(cache_1.directory, "data/cache".to_string());
+        assert_eq!(cache_1.chunk_size, 1024_usize);
+    }
+
+    #[tokio::test]
+    async fn test_write_and_read_file() {
+        let cache = Cache::new(None, None);
+        let file_path = "test.txt";
+        let file_content = "this is a test".to_string();
+        let res = cache.write_file_content(file_path, file_content).await;
+        assert!(res.is_ok());
+        let content = cache.read_file_content(file_path).await;
+        match content {
+            Ok(buf) => {
+                assert_eq!(buf, "this is a test".to_string());
+            }
+            Err(e) => {
+                println!(
+                    "An error occurred while testing cache reading: {}",
+                    e.to_string()
+                );
+                assert!(false);
+            }
+        }
+    }
+}

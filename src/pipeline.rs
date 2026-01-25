@@ -23,15 +23,15 @@ impl Pipeline {
         cache_directory: Option<String>,
         cache_chunk_size: Option<usize>,
     ) -> Self {
-        return Self {
-            directory_path: directory_path,
-            chunk_size: chunk_size,
-            qdrant_url: qdrant_url,
-            collection_name: collection_name,
-            cache_directory: cache_directory,
-            cache_chunk_size: cache_chunk_size,
-            cached: cached,
-        };
+        Self {
+            directory_path,
+            chunk_size,
+            qdrant_url,
+            collection_name,
+            cache_directory,
+            cache_chunk_size,
+            cached,
+        }
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
@@ -50,5 +50,33 @@ impl Pipeline {
             vectordb.upload_embeddings(chunks).await?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::pipeline::Pipeline;
+
+    #[tokio::test]
+    async fn test_pipeline_run() {
+        let qdrant_url_var = std::env::var("QDRANT_URL");
+        let qdrant_url = match qdrant_url_var {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                println!("Skipping test because Qdrant is not available");
+                return;
+            }
+        };
+        let pipeline = Pipeline::new(
+            "testfiles/".to_string(),
+            1024_usize,
+            qdrant_url,
+            "test-collection".to_string(),
+            true,
+            None,
+            None,
+        );
+        let result = pipeline.run().await;
+        assert!(result.is_ok());
     }
 }
