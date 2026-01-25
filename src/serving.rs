@@ -242,10 +242,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!(
-                    "Could not generate an OpenAI request because of {}",
-                    e
-                ),
+                detail: format!("Could not generate an OpenAI request because of {}", e),
             });
         }
     };
@@ -263,10 +260,7 @@ async fn rag(
         Err(e) => {
             return Err(RagError {
                 status_code: 500,
-                detail: format!(
-                    "Could not generate an OpenAI response because of {}",
-                    e
-                ),
+                detail: format!("Could not generate an OpenAI response because of {}", e),
             });
         }
     };

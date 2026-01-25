@@ -25,7 +25,7 @@ pub fn embed_text(text: String) -> Embedding {
     let embedder: Embedder = EmbedderBuilder::with_avgdl(DEFAULT_AVGDL)
         .language_mode(LanguageMode::Detect)
         .build();
-    
+
     embedder.embed(&text)
 }
 

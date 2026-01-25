@@ -35,7 +35,8 @@ impl Parser {
                         .to_str()
                         .expect("Should be able to convert path to string"),
                 )
-                .await {
+                .await
+            {
                 return Ok(s);
             };
         }
