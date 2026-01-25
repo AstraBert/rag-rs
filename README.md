@@ -27,6 +27,12 @@ Install with cargo:
 cargo install rag-rs
 ```
 
+Install with npm:
+
+```bash
+npm install @cle-does-things/rag-rs@latest
+```
+
 ### `load` command
 
 Parse, chunk and embed the documents in a given directory, and upload them to a vector store.
@@ -125,7 +131,10 @@ rag-rs --qdrant-url http://localhost:6334 \
 To reach the first stable version, this software will first:
 
 - [X] Add a caching layer (v0.2.0-alpha)
-- [ ] Introduce thorough testing
-- [ ] Add a programmatic API along with the CLI app, possibly both in Rust and Python
-- [ ] Add an NPM-installable version
-- [ ] Add support for more text-based file formats, and possibly for more unstructured file formats
+- [X] Introduce thorough testing (v0.2.1)
+- [X] Add an NPM-installable version (v0.2.1)
+
+Moreover, for future releases, there will be:
+
+- [ ] A programmatic API along with the CLI app, possibly both in Rust and Python
+- [ ] Support for more text-based file formats, and possibly for more unstructured file formats
